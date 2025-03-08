@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sidebar Navigation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .content {
+        display: none;
+      }
+      .active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body class="flex h-screen bg-gray-100">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-green-900 text-white p-5 space-y-4 h-screen relative">
+      <!-- UTM -->
+      <h1 class="text-3xl font-bold text-center">UTM</h1>
+
+      <h2 class="text-xl font-bold">Security Settings</h2>
+      <nav>
+        <ul>
+          <li>
+            <button
+              class="sidebar-btn w-full text-left p-2 hover:bg-green-700"
+              data-target="antivirus"
+            >
+              Antivirus
+            </button>
+          </li>
+          <li>
+            <button
+              class="sidebar-btn w-full text-left p-2 hover:bg-green-700"
+              data-target="policy-imp"
+            >
+              Policy Implementation
+            </button>
+          </li>
+          <li>
+            <button
+              class="sidebar-btn w-full text-left p-2 hover:bg-green-700"
+              data-target="firewall"
+            >
+              Firewall
+            </button>
+          </li>
+          <li>
+            <button
+              class="sidebar-btn w-full text-left p-2 hover:bg-green-700"
+              data-target="phishing-detection"
+            >
+              Phishing Detection
+            </button>
+          </li>
+          <li>
+            <button
+              class="sidebar-btn w-full text-left p-2 hover:bg-green-700"
+              data-target="firewall-dpi"
+            >
+              Firewall-DPI
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Logout Button -->
+      <button
+        onclick="window.location.href='login.html'"
+        class="absolute bottom-5 left-5 right-5 p-2 bg-red-600 hover:bg-red-700 text-white text-center font-bold rounded-md"
+      >
+        Logout
+      </button>
+    </aside>
+
+    <!-- Content Area -->
+    <main class="flex-1 p-6 overflow-scroll bg-gray-900 text-white">
+      <div id="antivirus" class="content active">
+        <h1 class="text-2xl font-bold">Antivirus</h1>
+        <p class="mt-2">
+          Antivirus software helps protect your system from malware, viruses,
+          and other threats.
+        </p>
+      </div>
+      <div id="policy-imp" class="content">
+        <div class="container p-6 bg-gray-900 shadow-md rounded-lg">
+          <h2 class="text-xl font-bold mb-4 text-white">
+            Policy Implementation
+          </h2>
+          <div id="question-container" class="bg-gray-800 p-4 rounded-lg">
+            <div class="question mb-4">
+              <label for="policy" class="block font-medium text-white"
+                >Select Policy Category:</label
+              >
+              <select
+                id="policy"
+                class="mt-2 w-full p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white"
+                onchange="showQuestions()"
+              >
+                <option value="">--Select--</option>
+                <option value="password">Password Policy</option>
+                <option value="lockout">Account Lockout Policy</option>
+                <option value="session">Session Timeout Policy</option>
+                <option value="mfa">Multi-Factor Authentication Policy</option>
+                <option value="data">Data Retention & Deletion Policy</option>
+                <option value="access">Access Control Policy</option>
+              </select>
+            </div>
+            <div id="dynamic-questions"></div>
+            <button
+              class="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Submit
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- FIREWALL SECTION -->
+
+      <div id="firewall" class="content">
+        <div class="mb-6 bg-gray-800 p-4 rounded-lg">
+          <h2 class="text-lg font-semibold mb-2">Add Rule</h2>
+          <input
+            id="sourceIp"
+            type="text"
+            placeholder="Source IP"
+            class="w-full p-2 mb-2 rounded bg-gray-700 text-white"
+          />
+          <input
+            id="destinationIp"
+            type="text"
+            placeholder="Destination IP"
+            class="w-full p-2 mb-2 rounded bg-gray-700 text-white"
+          />
+          <input
+            id="port"
+            type="number"
+            placeholder="Port"
+            class="w-full p-2 mb-2 rounded bg-gray-700 text-white"
+          />
+          <select
+            id="action"
+            class="w-full p-2 mb-2 rounded bg-gray-700 text-white"
+          >
+            <option value="ALLOW">ALLOW</option>
+            <option value="DENY">DENY</option>
+          </select>
+          <button
+            onclick="addRule()"
+            class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded w-full"
+          >
+            Add Rule
+          </button>
+        </div>
+
+        <!-- Rules List -->
+        <ul id="rulesList" class="bg-gray-800 p-4 rounded-lg space-y-2"></ul>
+        <script>
+            const apiUrl = 'http://localhost:8221/api/firewall/rules';
+          async function fetchRules() {
+            try {
+              const response = await fetch(apiUrl);
+              const rules = await response.json();
+              updateRulesList(rules);
+            } catch (error) {
+              console.error("Error fetching rules:", error);
+            }
+          }
+          async function addRule() {
+            const sourceIp = document.getElementById("sourceIp").value;
+            const destinationIp =
+              document.getElementById("destinationIp").value;
+            const port = document.getElementById("port").value;
+            const action = document.getElementById("action").value;
+
+            if (!sourceIp || !destinationIp || !port) {
+              alert("Please fill in all fields.");
+              return;
+            }
+
+            try {
+              console.log("Adding");
+              const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sourceIp, destinationIp, port, action }),
+              });
+
+              console.log;
+              const updatedRules = await response.json();
+              updateRulesList(updatedRules);
+
+              // Clear form inputs
+              document.getElementById("sourceIp").value = "";
+              document.getElementById("destinationIp").value = "";
+              document.getElementById("port").value = "";
+            } catch (error) {
+              console.log("in error");
+              console.error("Error adding rule:", error);
+            }
+          }
+
+          async function deleteRule(id) {
+            try {
+              const response = await fetch(`${apiUrl}/${id}`, {
+                method: "DELETE",
+              });
+              const updatedRules = await response.json();
+              updateRulesList(updatedRules);
+            } catch (error) {
+              console.error("Error deleting rule:", error);
+            }
+          }
+
+          function updateRulesList(rules) {
+            const rulesList = document.getElementById("rulesList");
+            rulesList.innerHTML = "";
+
+            rules.forEach((rule) => {
+              const li = document.createElement("li");
+              li.className =
+                "flex justify-between items-center bg-gray-700 p-2 rounded";
+              li.innerHTML = `<span>${rule.id}: ${rule.sourceIp} → ${rule.destinationIp} | Port: ${rule.port} | Action: ${rule.action}</span>
+                                        <button onclick="deleteRule('${rule.id}')" class='bg-red-500 px-3 py-1 rounded'>Delete</button>`;
+              rulesList.appendChild(li);
+            });
+          }
+          
+          fetchRules();
+        </script>
+      </div>
+      <!-- FIREWALL DPI SECTION -->
+      <div id="firewall-dpi" class="content">
+        <div class="mb-6 bg-gray-800 p-4 rounded-lg">
+          <h2 class="text-lg font-semibold mb-2">Add Rule</h2>
+          <input
+            id="ip"
+            type="text"
+            placeholder="IP Address"
+            class="w-full p-2 mb-2 rounded bg-gray-700 text-white"
+          />
+          <button
+            onclick="addRuleDpi()"
+            class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded w-full"
+          >
+            Add Rule
+          </button>
+        </div>
+
+        <!-- Rules List -->
+        <ul id="rulesListDpi" class="bg-gray-800 p-4 rounded-lg space-y-2"></ul>
+
+        <script>
+          let dpiUrl = "http://localhost:8221/api/firewalldpi";
+
+          async function fetchRulesDpi() {
+            try {
+              const response = await fetch(`${dpiUrl}/rules`);
+              const rules = await response.json();
+              print(rules);
+              updateRulesListDpi(rules);
+            } catch (error) {
+              console.error("Error fetching rules:", error);
+            }
+          }
+
+          async function addRuleDpi() {
+            const sourceIp = document.getElementById("ip").value;
+            if (!sourceIp) {
+              alert("Please fill in all fields.");
+              return;
+            }
+
+            try {
+              console.log("Adding");
+              const response = await fetch(`${dpiUrl}/add`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: sourceIp,
+              });
+              console.log(response);
+              const updatedRules = await response.json();
+
+              updateRulesListDpi(updatedRules);
+              document.getElementById("ip").value = "";
+            } catch (error) {
+              console.log("in error");
+              console.error("Error adding rule:", error);
+            }
+          }
+
+          function updateRulesListDpi(rules) {
+            const rulesList = document.getElementById("rulesListDpi");
+            rulesList.innerHTML = "";
+            rules.forEach((rule) => {
+              const li = document.createElement("li");
+              li.className =
+                "flex justify-between items-center bg-gray-700 p-2 rounded";
+              li.innerHTML = `<span>${rule.id}: ${rule.rule}  Blocked </span>
+                          <button onclick="deleteRuleDpi('${rule.id}')" class='bg-red-500 px-3 py-1 rounded'>Delete</button>`;
+              rulesList.appendChild(li);
+            });
+          }
+
+          // Fetch rules when page loads
+
+          async function deleteRuleDpi(id) {
+            try {
+              const response = await fetch(`${dpiUrl}/remove?ruleId=${id}`, {
+                method: "DELETE",
+              });
+              const updatedRules = await response.json();
+              console.log(updatedRules);
+              updateRulesListDpi(updatedRules);
+            } catch (error) {
+              console.error("Error deleting rule:", error);
+            }
+          }
+
+          fetchRulesDpi();
+        </script>
+      </div>
+
+      <!-- PHISHING DETECTION -->
+
+      <div id="phishing-detection" class="content mt-6">
+        <div class="container p-6 bg-gray-900 shadow-md rounded-lg">
+          <h2 class="text-xl font-bold text-white mb-4">Phishing Detection</h2>
+          <div class="mb-4">
+            <label for="url-input" class="block font-medium text-white mb-2"
+              >Enter URL:</label
+            >
+            <input
+              type="url"
+              id="url-input"
+              placeholder="https://example.com"
+              class="w-full p-3 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <button
+            id="check-phishing"
+            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Check URL
+          </button>
+          <p id="phishing-result" class="mt-4 text-lg font-semibold"></p>
+        </div>
+        <script>
+          async function checkPhishing() {
+            const urlInput = document.getElementById("url-input").value.trim();
+            const resultElement = document.getElementById("phishing-result");
+
+            if (!urlInput) {
+              resultElement.textContent = "Please enter a valid URL.";
+              resultElement.classList.add("text-yellow-400");
+              return;
+            }
+
+            resultElement.textContent = "Checking...";
+            resultElement.classList.remove(
+              "text-green-400",
+              "text-red-400",
+              "text-yellow-400"
+            );
+
+            try {
+              const response = await fetch(
+                "https://phishingservice.onrender.com/predict",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ url: urlInput }),
+                }
+              );
+
+              const data = await response.json();
+
+              if (data.prediction === "Phishing") {
+                resultElement.textContent = "⚠️ Phishing Detected!";
+                resultElement.classList.add("text-red-400");
+              } else {
+                resultElement.textContent = "✅ Not Phishing.";
+                resultElement.classList.add("text-green-400");
+              }
+            } catch (error) {
+              console.log(error);
+              resultElement.textContent = "❌ Error checking URL.";
+              resultElement.classList.add("text-yellow-400");
+            }
+          }
+
+          document
+            .getElementById("check-phishing")
+            .addEventListener("click", checkPhishing);
+        </script>
+      </div>
+    </main>
+
+    <script>
+      document.querySelectorAll(".sidebar-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+          document.querySelectorAll(".content").forEach((section) => {
+            section.classList.remove("active");
+          });
+          document.getElementById(this.dataset.target).classList.add("active");
+        });
+      });
+
+      const policyQuestions = {
+        password: [
+          {
+            question: "Minimum password length?",
+            type: "number",
+            key: "min_length",
+          },
+          {
+            question: "Require complexity?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "complexity",
+          },
+          {
+            question: "At least one uppercase letter?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "uppercase",
+            condition: "complexity == 'Yes'",
+          },
+          {
+            question: "At least one lowercase letter?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "lowercase",
+            condition: "complexity == 'Yes'",
+          },
+          {
+            question: "At least one number?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "number",
+            condition: "complexity == 'Yes'",
+          },
+          {
+            question: "At least one special character?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "special_char",
+            condition: "complexity == 'Yes'",
+          },
+          {
+            question: "Minimum days before password change?",
+            type: "number",
+            key: "min_days_change",
+          },
+          {
+            question: "Maximum days before password must be changed?",
+            type: "number",
+            key: "max_days_change",
+          },
+          {
+            question: "Restrict password reuse?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "password_reuse",
+          },
+          {
+            question: "How many past passwords to remember?",
+            type: "number",
+            key: "past_passwords",
+            condition: "password_reuse == 'Yes'",
+          },
+        ],
+        lockout: [
+          {
+            question: "Max failed login attempts before lockout?",
+            type: "number",
+            key: "max_attempts",
+          },
+          {
+            question: "Lockout duration (minutes)?",
+            type: "number",
+            key: "lockout_duration",
+          },
+          {
+            question: "Auto-unlock after lockout period?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "auto_unlock",
+          },
+          {
+            question: "Notify user upon lockout?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "notify_user",
+          },
+        ],
+        session: [
+          {
+            question: "Auto logout after inactivity period?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "auto_logout",
+          },
+          {
+            question: "Timeout duration?",
+            type: "text",
+            key: "timeout_duration",
+            condition: "auto_logout == 'Yes'",
+          },
+          {
+            question: "Require re-authentication after timeout?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "re_authentication",
+          },
+          {
+            question: "Enable warning before session expires?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "session_warning",
+          },
+        ],
+        mfa: [
+          {
+            question: "Require MFA for all users?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "require_mfa",
+          },
+          {
+            question: "Allowed MFA methods:",
+            type: "checkbox",
+            options: [
+              "OTP via Email",
+              "OTP via SMS",
+              "Authenticator App",
+              "Biometric",
+            ],
+            key: "mfa_methods",
+          },
+          {
+            question: "Enforce MFA for specific actions?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "mfa_specific_actions",
+          },
+        ],
+        data: [
+          {
+            question: "Retention period for user data?",
+            type: "text",
+            key: "retention_period",
+          },
+          {
+            question: "Automatic deletion after retention period?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "auto_deletion",
+          },
+          {
+            question: "Notify users before data deletion?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "notify_before_deletion",
+          },
+          {
+            question: "Require user consent before deletion?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "require_consent",
+          },
+          {
+            question: "Backup retention period?",
+            type: "text",
+            key: "backup_retention",
+          },
+        ],
+        access: [
+          {
+            question: "Define user roles and permissions?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "user_roles",
+          },
+          {
+            question: "Require approval for role changes?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "role_change_approval",
+          },
+          {
+            question: "Restrict access based on role?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "restrict_access",
+          },
+          {
+            question: "Enforce least privilege principle?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "least_privilege",
+          },
+          {
+            question: "Enable logging of access and permission changes?",
+            type: "select",
+            options: ["Yes", "No"],
+            key: "enable_logging",
+          },
+        ],
+      };
+
+      function showQuestions() {
+        const selectedPolicy = document.getElementById("policy").value;
+        const questionContainer = document.getElementById("dynamic-questions");
+        questionContainer.innerHTML = "";
+
+        if (!policyQuestions[selectedPolicy]) return;
+
+        policyQuestions[selectedPolicy].forEach((q) => {
+          const div = document.createElement("div");
+          div.classList.add("mb-4");
+
+          const label = document.createElement("label");
+          label.classList.add("block", "font-medium", "text-white", "mb-2");
+          label.textContent = q.question;
+          div.appendChild(label);
+
+          if (q.type === "select") {
+            const select = document.createElement("select");
+            select.classList.add(
+              "w-full",
+              "p-3",
+              "border",
+              "border-gray-600",
+              "rounded-lg",
+              "focus:outline-none",
+              "focus:ring-2",
+              "focus:ring-blue-500",
+              "focus:border-blue-500",
+              "bg-gray-700",
+              "text-white"
+            );
+            select.innerHTML = q.options
+              .map((opt) => `<option value="${opt}">${opt}</option>`)
+              .join("");
+            select.setAttribute("data-key", q.key);
+            div.appendChild(select);
+          } else {
+            const input = document.createElement("input");
+            input.type = q.type;
+            input.classList.add(
+              "w-full",
+              "p-3",
+              "border",
+              "border-gray-600",
+              "rounded-lg",
+              "focus:outline-none",
+              "focus:ring-2",
+              "focus:ring-blue-500",
+              "focus:border-blue-500",
+              "bg-gray-700",
+              "text-white",
+              "placeholder-gray-400"
+            );
+            input.setAttribute("data-key", q.key);
+            div.appendChild(input);
+          }
+
+          questionContainer.appendChild(div);
+        });
+      }
+
+      function generateJSON() {
+        const data = {};
+        document.querySelectorAll("[data-key]").forEach((el) => {
+          data[el.getAttribute("data-key")] = el.value;
+        });
+        console.log(JSON.stringify(data, null, 2));
+        alert("Configuration saved! Check console for JSON output.");
+      }
+
+      // PHISHING FUNCTIONS
+    </script>
+  </body>
+</html>
